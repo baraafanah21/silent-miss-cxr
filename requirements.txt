@@ -1,0 +1,10 @@
+numpy==2.5.3
+scipy==1.18.1
+pandas==3.0.5
+scikit-learn==1.9.1
+matplotlib==3.11.2
+# real-image experiment only
+torch==2.14.1
+torchxrayvision==1.5.5
+scikit-image==0.26.0
+opencv-python-headless==5.0.0.93
