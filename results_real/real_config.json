@@ -1,0 +1,10 @@
+{
+ "n_images": 637,
+ "n_patients": 381,
+ "n_female": 241,
+ "n_covid": 432,
+ "sex_auc_raw": 0.7089358313424703,
+ "n_splits": 300,
+ "target_cov": 0.8,
+ "u_B": 0.35
+}

@@ -1,0 +1,64 @@
+{
+ "base": {
+  "frac_B": 0.2,
+  "prev": 0.3,
+  "dA": 2.5,
+  "dB": 2.5,
+  "sep": 0.0,
+  "uB": 0.0,
+  "rho": 0.03,
+  "m": 0.0,
+  "mode": "B",
+  "gain": 0.15,
+  "kt": 1.0,
+  "n_tr": 4000,
+  "n_val": 2000,
+  "n_te": 4000,
+  "target_cov": 0.8,
+  "model": "lr",
+  "n_audit": 600,
+  "flip": "random",
+  "nonlin": false
+ },
+ "arch": {
+  "baseline": {},
+  "signal gap": {
+   "dB": 1.8
+  },
+  "annotation bias": {
+   "sep": 2.0,
+   "uB": 0.35
+  },
+  "domain shift": {
+   "m": 1.5
+  },
+  "annot+shift": {
+   "sep": 2.0,
+   "uB": 0.35,
+   "m": 1.5
+  },
+  "all four": {
+   "sep": 2.0,
+   "uB": 0.35,
+   "m": 1.5,
+   "dB": 1.8
+  }
+ },
+ "variants": {
+  "main (LR, random flips)": {},
+  "subtle-case flips": {
+   "flip": "subtle"
+  },
+  "nonlinear features + MLP": {
+   "nonlin": true,
+   "model": "mlp"
+  },
+  "coverage 90%": {
+   "target_cov": 0.9
+  },
+  "coverage 70%": {
+   "target_cov": 0.7
+  }
+ },
+ "reps": 60
+}
