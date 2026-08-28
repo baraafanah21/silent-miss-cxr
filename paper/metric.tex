@@ -1,0 +1,14 @@
+\subsection{Relation of the Silent-Miss Rate to Standard Metrics}
+\label{sec:metric}
+The silent-miss rate is not a new probability, and we do not claim it as one. Let $Y=1$ denote disease, $\hat{Y}$ the model's prediction and $D=1$ deferral, all within one subgroup. Four familiar quantities and the silent-miss rate are
+\begin{align}
+\mathrm{FNR} &= P(\hat{Y}=0 \mid Y=1), \nonumber\\
+\mathrm{FNR}_{\mathrm{sel}} &= P(\hat{Y}=0 \mid Y=1, D=0), \nonumber\\
+c^{+} &= P(D=0 \mid Y=1), \nonumber\\
+\mathrm{CR} &= P(D=1 \mid \hat{Y}=0, Y=1), \nonumber\\
+\mathrm{SMR} &= P(\hat{Y}=0, D=0 \mid Y=1) \nonumber\\
+ &= \mathrm{FNR}_{\mathrm{sel}}\, c^{+} = \mathrm{FNR}\,(1-\mathrm{CR}). \label{eq:smr}
+\end{align}
+Here FNR is the full-coverage false-negative rate, $\mathrm{FNR}_{\mathrm{sel}}$ is one minus the sensitivity on accepted cases, $c^{+}$ is the coverage of diseased patients, and CR is the catch rate. Equation~\eqref{eq:smr} shows that the silent-miss rate is the joint probability that a diseased patient is both missed and not referred, that is, the unflagged false-negative rate of the whole human-AI pathway.
+
+Its value for monitoring comes from what parity in the usual metrics does \emph{not} imply. Equal overall coverage does not give equal $c^{+}$, because the two groups can differ in prevalence and in how confident the model is on their diseased cases. Equal selective sensitivity does not give equal SMR when $c^{+}$ differs, and equal full-coverage FNR does not give equal SMR when the catch rate differs. The silent-miss rate is the one quantity that equals a diseased patient's risk of leaving the system undiagnosed, and it can be estimated from the same confusion counts as the others. Section~\ref{sec:decomp} shows empirically that the gaps in these quantities can differ in size and even in sign.

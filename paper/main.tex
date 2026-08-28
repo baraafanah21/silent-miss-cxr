@@ -1,0 +1,307 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\newcommand{\pp}{\,pp}
+
+\begin{document}
+
+\title{Drivers of Subgroup Abstention in Selective Chest X-Ray AI: The Roles of Annotation Bias and Domain Shift}
+
+\author{
+\IEEEauthorblockN{Bara' Afanah}
+\IEEEauthorblockA{\textit{Computer Engineering Department} \\
+\textit{Faculty of Engineering}\\
+\textit{An-Najah National University}, Nablus, Palestine \\
+s12323988@stu.najah.edu}
+\and
+\IEEEauthorblockN{Ahmad Shanti}
+\IEEEauthorblockA{\textit{Computer Science Department} \\
+\textit{Faculty of IT \& Artificial Intelligence}\\
+\textit{An-Najah National University}, Nablus, Palestine \\
+s12326330@stu.najah.edu}
+\and
+\IEEEauthorblockN{Adel Ibdah}
+\IEEEauthorblockA{\textit{Computer Engineering Department} \\
+\textit{Faculty of Engineering}\\
+\textit{An-Najah National University}, Nablus, Palestine \\
+s12323227@stu.najah.edu}
+\and
+\IEEEauthorblockN{Basil Ibdah}
+\IEEEauthorblockA{\textit{Doctor of Medicine Department} \\
+\textit{Faculty of Medicine and Allied Medical Sciences}\\
+\textit{An-Najah National University}, Nablus, Palestine \\
+s12240294@stu.najah.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+Selective classification lets a chest X-ray model abstain on uncertain cases and defer them to a radiologist. A low abstention rate in a patient subgroup is often read as a sign that the model handles that subgroup well, but it can also mean that the model is confidently wrong. We ask which upstream problem drives subgroup differences in abstention: a disease signal that is intrinsically weaker in the subgroup, underdiagnosis in the training labels, or domain shift at deployment. A controlled simulation switches each driver, and subgroup separability, on independently in a $2^4$ factorial design, and we monitor the silent-miss rate, the share of diseased patients who are missed and not deferred, which we relate formally to the false-negative rate and coverage. The drivers moved abstention in opposite directions: a weaker signal raised the subgroup's abstention by 6.7 percentage points (pp), while label bias and shift lowered it. With all four active, the abstention gap was +1.4\pp{} (95\% CI +1.0 to +1.9) but the silent-miss gap was +13.9\pp{} (+12.7 to +15.1). The pattern held under subtle-case mislabelling, nonlinear features with a neural network, and other coverage targets. On 637 real radiographs encoded by a pretrained DenseNet-121, injected label bias widened the silent-miss gap only when the group was identifiable from the embeddings (female patients +6.0\pp; random group 0.0\pp), and a scanner-like shift cut female patients' abstention from 23\% to 2\% while errors on accepted cases rose. Equalising abstention with group thresholds did not reduce silent misses, whereas per-group recalibration on a small clean-label audit set removed most of the gap caused by label bias and shift. Equal abstention rates are therefore not evidence of fairness.
+\end{abstract}
+
+\begin{IEEEkeywords}
+selective classification, abstention, algorithmic fairness, chest radiography, label bias, underdiagnosis, domain shift
+\end{IEEEkeywords}
+
+%=====================================================================
+\section{Introduction}
+
+Deep learning models that read chest radiographs are increasingly proposed for triage and reporting. A common safeguard is selective classification: the model makes a prediction only when its confidence passes a threshold and defers the remaining cases to a human reader \cite{geifman2017}. Deferral is attractive because it concentrates the model's mistakes in the cases a radiologist will see anyway.
+
+Abstention is not necessarily spread evenly across patients. Jones et al. showed that selective classification can widen accuracy gaps between groups, and that adding abstention can even lower one group's accuracy \cite{jones2021}. In chest X-ray AI, subgroup performance gaps have been traced to several upstream causes. Classifiers trained on labels mined from clinical records underdiagnose some patient groups more than others \cite{seyyedkalantari2021}, and report-labelling tools themselves perform differently across age groups \cite{santomartino2024}. Models also lose accuracy when moved between hospitals \cite{zech2018}, and public datasets combine label-quality problems with domain shift \cite{rafferty2025}. What has not been examined is how each of these causes reaches the abstention mechanism. If they push abstention in different directions, a monitor that compares abstention rates across subgroups could report parity while one subgroup is being harmed.
+
+We study this question first with a controlled simulation, because in real datasets the causes occur together and the true labels are unknown, and then test the main mechanisms on real radiographs with a pretrained deep network. Our contributions are:
+\begin{itemize}
+\item a factorial simulation that separates four drivers of subgroup harm in a selective classifier: an intrinsic disease-signal gap, annotation bias, subgroup separability and domain shift;
+\item the silent-miss rate as a monitoring target, with its exact relation to the false-negative rate, selective sensitivity and coverage, and evidence that it is not implied by any of them;
+\item evidence that the drivers move abstention in opposite directions, that label bias acts only on separable subgroups, that some shifts raise error without raising abstention, and that audits with biased labels misstate the gap, with robustness checks and a replication of the key mechanisms on 637 real radiographs;
+\item a test of two mitigations, showing that equalising abstention does not help while recalibration on a small clean-label audit set does.
+\end{itemize}
+
+%=====================================================================
+\input{related}
+
+%=====================================================================
+\section{Study Design}
+
+\subsection{Data-Generating Process}
+Each simulated case has 20 features standing in for an image embedding, a binary disease label $y$ with prevalence 0.30, and a subgroup $g$. Subgroup $B$ makes up 20\% of cases and subgroup $A$ the rest. Disease moves cases along the first feature direction and subgroup membership along the second:
+\begin{equation}
+x = z + \delta_g\,(y - \tfrac{1}{2})\,e_1 + s\,\mathbb{1}[g = B]\,e_2, \qquad z \sim \mathcal{N}(0, I_{20}),
+\end{equation}
+where $\delta_g$ is the disease-signal strength in subgroup $g$ and $s$ sets how separable the subgroups are. The two directions are orthogonal, so separability carries no information about disease by itself.
+
+\subsection{The Four Drivers}
+Table~\ref{tab:drivers} lists the drivers and their two levels. Annotation bias flips a share $u_B$ of subgroup $B$'s true positives to negative in the recorded labels used for training and auditing, which mimics underdiagnosis. Domain shift is applied only to subgroup $B$'s deployment cases: features are rescaled by $(1+0.15m)$ (contrast gain) and translated by $m$ along a random unit direction. All recorded labels also carry 3\% uniform label noise.
+
+\begin{table}[t]
+\centering
+\caption{The four drivers and their levels in the factorial design.}
+\label{tab:drivers}
+\footnotesize
+\begin{tabular}{@{}p{1.75cm}p{1.15cm}p{1.15cm}p{3.1cm}@{}}
+\toprule
+Driver & Low & High & Meaning \\
+\midrule
+Signal gap & $\delta_B{=}2.5$ & $\delta_B{=}1.8$ & Disease harder to see in $B$ ($\delta_A{=}2.5$) \\
+Annotation bias & $u_B{=}0$ & $u_B{=}0.35$ & 35\% of $B$'s positives recorded as negative \\
+Separability & $s{=}0$ & $s{=}2$ & Group detectable from features \\
+Domain shift & $m{=}0$ & $m{=}1.5$ & $B$'s deployment features rescaled and translated \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Selective Classifier}
+The classifier is an $L_2$-regularised logistic regression ($C=1$) trained on 4,000 cases with the recorded labels. Its confidence is $\max(p, 1-p)$. The abstention threshold is the 20th percentile of confidence on a separate 2,000-case calibration set drawn from the training domain, so the system is designed to abstain on 20\% of cases. The threshold is then applied unchanged to 4,000 deployment cases, as a hospital would fix it before go-live.
+
+\subsection{Metrics}
+All metrics are computed per subgroup against the true labels unless stated otherwise, and gaps are reported as $B$ minus $A$ in percentage points (pp).
+\begin{itemize}
+\item \emph{Abstention rate}: share of cases deferred.
+\item \emph{Selective risk}: error rate among accepted cases.
+\item \emph{Silent-miss rate}: diseased cases that the model calls negative and does not defer, divided by all diseased cases in the subgroup.
+\item \emph{Catch rate}: share of a subgroup's missed diseased cases that abstention intercepts.
+\item \emph{Audit selective risk}: selective risk computed with the recorded, possibly biased labels, which is what a routine audit would measure.
+\end{itemize}
+
+\input{metric}
+
+\subsection{Experiments and Statistics}
+The main experiment is a full $2\times2\times2\times2$ factorial design with 200 independent replicates in each of the 16 cells. Main and two-way interaction effects are estimated by ordinary least squares on $\pm1$-coded factors, with 95\% intervals from 400 bootstrap resamples within cells. We also attribute the change from the all-off to the all-on cell to the four drivers using Shapley values averaged over all 24 orderings. Three further experiments vary one driver at a time with 100 replicates per point: the underdiagnosis rate from 0 to 0.5 at two separability levels, the shift magnitude from 0 to 3 for three shift types, and the share of subgroup $B$ from 5\% to 50\%. As a robustness check, four archetype scenarios were repeated with a one-hidden-layer neural network (32 units, 30 replicates, smaller samples). Scenario means carry $t$-based 95\% confidence intervals over replicates. Software versions, seeds and settings are listed in Table~\ref{tab:repro}.
+
+%=====================================================================
+\input{realdata}
+
+\section{Results}
+
+\subsection{The Drivers Push Abstention in Opposite Directions}
+
+With no driver active the system behaved as designed: both subgroups had 19.9\% abstention and 3.8--3.9\% selective risk (Table~\ref{tab:scen}). Each driver then moved subgroup $B$'s abstention rate, but not in the same direction (Fig.~\ref{fig:shapley}). A weaker disease signal raised it by 6.7\pp. Domain shift lowered it by 3.5\pp, and annotation bias and separability each lowered it by about 0.9\pp. The silent-miss gap, in contrast, rose under every driver.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{figs/fig1_shapley.pdf}
+\caption{Shapley attribution of the change from the all-off to the all-on factorial cell to each driver, for three subgroup gaps ($B$ minus $A$, pp). Bars are means over 200 replicates per cell; whiskers are 95\% bootstrap intervals.}
+\label{fig:shapley}
+\end{figure*}
+
+\begin{table*}[t]
+\centering
+\caption{Subgroup outcomes in selected factorial cells (logistic regression, 200 replicates each). Gaps are $B$ minus $A$ with 95\% confidence intervals.}
+\label{tab:scen}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+Scenario & \shortstack{Abstain\\$A$ (\%)} & \shortstack{Abstain\\$B$ (\%)} & \shortstack{Abstention\\gap (pp)} & \shortstack{Sel.\ risk\\$A$ / $B$ (\%)} & \shortstack{Silent misses\\in $B$ (\%)} & \shortstack{Silent-miss\\gap (pp)} & \shortstack{Misses caught\\in $B$ (\%)} \\
+\midrule
+All drivers off & 19.9 & 19.9 & $0.0$ [$-0.2$, $+0.2$] & 3.8 / 3.9 & 7.0 & $+0.3$ [$+0.1$, $+0.6$] & 63 \\
+Signal gap only & 18.5 & 26.3 & $+7.8$ [$+7.5$, $+8.0$] & 4.0 / 8.8 & 14.0 & $+6.4$ [$+6.1$, $+6.8$] & 54 \\
+Annotation bias + separability & 20.2 & 18.9 & $-1.3$ [$-1.5$, $-1.1$] & 3.9 / 5.0 & 12.3 & $+4.1$ [$+3.8$, $+4.5$] & 59 \\
+Domain shift only & 20.0 & 16.5 & $-3.5$ [$-3.8$, $-3.2$] & 3.7 / 5.0 & 8.6 & $+2.0$ [$+1.4$, $+2.7$] & 54 \\
+Annotation + separability + shift & 20.3 & 15.7 & $-4.6$ [$-4.9$, $-4.3$] & 3.9 / 5.9 & 13.9 & $+5.8$ [$+5.0$, $+6.6$] & 50 \\
+All four drivers & 19.2 & 20.6 & $+1.4$ [$+1.0$, $+1.9$] & 4.1 / 11.1 & 22.4 & $+13.9$ [$+12.7$, $+15.1$] & 42 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The opposing effects cancel. With all four drivers on, $B$ abstained only 1.4\pp{} more than $A$, close enough to pass as fair on a monitoring dashboard. Yet 22.4\% of $B$'s diseased cases were missed and accepted without deferral, against 8.5\% in $A$, and abstention caught 42\% of $B$'s missed cases compared with 63\% at baseline.
+
+The fifth row of Table~\ref{tab:scen} is the most worrying case. Without any intrinsic signal gap, $B$ abstained 4.6\pp{} \emph{less} than $A$, which a reviewer might read as the model being more certain about $B$, while $B$'s silent-miss rate was 5.8\pp{} higher.
+
+The signal gap is the only driver that behaves as the selective-classification literature predicts \cite{jones2021}. At full coverage $B$'s error was 1.72 times $A$'s (16.3\% vs.\ 9.5\%); at 80\% target coverage it was 2.19 times (8.8\% vs.\ 4.0\%). Abstention lowered both error rates but widened the ratio.
+
+\subsection{Annotation Bias Harms Only a Separable Subgroup}
+
+When group membership could not be read from the features, underdiagnosis in $B$'s labels left $B$ almost untouched: even at an underdiagnosis rate of 0.5, the silent-miss gap stayed within 0.2\pp{} of zero (Fig.~\ref{fig:dose}, top). Without a group signal, the model cannot apply the bias to $B$ alone, so its effect is spread over the whole population. Once the subgroup was separable, the same label bias produced a dose-response: the silent-miss gap rose steadily to 6.6\pp{} while $B$'s abstention rate fell by 2.1\pp. In the factorial model this appears as an annotation $\times$ separability interaction of +2.4\pp{} [+2.1, +2.7] on the silent-miss gap, about as large as either main effect.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.86\textwidth]{figs/fig2_dose.pdf}
+\caption{Dose-response experiments (100 replicates per point). Top: silent-miss gap and abstention gap as the underdiagnosis rate in $B$ increases, with and without subgroup separability. Bottom: selective risk (true labels) and abstention rate in $B$ as domain shift grows, for three shift types; dashed lines mark group $A$ and the 20\% design target.}
+\label{fig:dose}
+\end{figure*}
+
+The size of the subgroup mattered for label bias but not for shift (Table~\ref{tab:minority}). The annotation-bias silent-miss gap grew from 1.1\pp{} when $B$ was 5\% of the population to 7.0\pp{} at 50\%, whereas the shift-induced gap stayed between 1.6 and 1.9\pp. A plausible explanation is that a larger subgroup contributes more biased labels to training, so the model learns a subgroup-specific boundary more firmly.
+
+\begin{table}[t]
+\centering
+\caption{Silent-miss gap ($B$ minus $A$, pp) by share of subgroup $B$ (100 replicates per point).}
+\label{tab:minority}
+\footnotesize
+\begin{tabular}{@{}ccc@{}}
+\toprule
+Share of $B$ & Annotation bias + separability & Domain shift \\
+\midrule
+5\% & +1.1 & +1.7 \\
+10\% & +2.3 & +1.6 \\
+20\% & +4.3 & +1.7 \\
+30\% & +5.5 & +1.9 \\
+50\% & +7.0 & +1.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Domain Shift Harms Without Raising Abstention}
+
+Shift that affected only subgroup $B$ never raised $B$'s abstention by more than about one point, but it always raised the error on cases the system accepted (Fig.~\ref{fig:dose}, bottom). The type of shift decided what happened to abstention (Table~\ref{tab:shift}). Contrast gain stretches cases away from the decision boundary, so the model becomes more confident and abstains less, by 6\pp{} at the largest shift. Translation moves cases without making them look uncertain, so abstention stayed near its 20\% target while selective risk almost doubled. In neither case does the abstention rate give a warning.
+
+\begin{table}[t]
+\centering
+\caption{Abstention and selective risk in $B$ at the largest shift ($m=3$; true labels, 100 replicates per point).}
+\label{tab:shift}
+\footnotesize
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Shift type in $B$ & Abstention in $B$ (\%) & Selective risk in $B$ (\%) \\
+\midrule
+None ($m=0$) & 19.9--20.4 & 3.7--3.9 \\
+Translation only & 21.0 & 7.2 \\
+Contrast gain only & 13.9 & 5.0 \\
+Translation + gain & 14.6 & 6.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When the same shift hit both groups, abstention fell to 14.9\% and selective risk rose to 6.6--6.7\% in each, with no gap between them. Shift is therefore a fairness problem specifically when it is group-specific, for example when one subgroup is mostly imaged on different equipment or at a different site.
+
+\subsection{Biased-Label Audits, Risk-Coverage Curves, and a Second Model}
+
+A hospital can audit a deployed model only against the labels it has. When those labels carry the same underdiagnosis the model was trained on, the audit misstates the subgroup gap (Table~\ref{tab:arch}). In the annotation-bias scenario the audit put $B$'s selective-risk gap at +5.1\pp{} when the true gap was +1.2\pp. The audit inflates the error because it scores the model's correct detections in $B$ as false positives. It also cannot see the misses that matter most: by construction, 35\% of $B$'s diseased cases are recorded as negative, so a model that misses them agrees with the record. Shift without label bias was audited accurately (+1.3\pp{} audited vs.\ +1.4\pp{} true).
+
+\begin{table*}[t]
+\centering
+\caption{Subgroup gaps ($B$ minus $A$, pp, 95\% CI) in four archetype scenarios for logistic regression (LR, 100 replicates) and a one-hidden-layer network (MLP, 30 replicates). Annotation bias uses $u_B = 0.35$ with $s = 2$; shift uses $m = 1.5$.}
+\label{tab:arch}
+\footnotesize
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+Scenario & Model & Abstention gap & Silent-miss gap & \shortstack{Selective-risk gap\\(true labels)} & \shortstack{Selective-risk gap\\(biased-label audit)} \\
+\midrule
+\multirow{2}{*}{Baseline} & LR & $+0.3$ [$-0.1$, $+0.6$] & $-0.1$ [$-0.5$, $+0.2$] & $0.0$ [$-0.2$, $+0.2$] & $0.0$ [$-0.3$, $+0.2$] \\
+ & MLP & $+0.2$ [$-0.6$, $+1.0$] & $0.0$ [$-1.1$, $+1.0$] & $-0.1$ [$-0.6$, $+0.3$] & $-0.2$ [$-0.8$, $+0.3$] \\
+\midrule
+\multirow{2}{*}{Annotation bias} & LR & $-1.4$ [$-1.8$, $-1.1$] & $+4.8$ [$+4.3$, $+5.4$] & $+1.2$ [$+1.1$, $+1.4$] & $+5.1$ [$+4.8$, $+5.4$] \\
+ & MLP & $+0.9$ [$+0.1$, $+1.6$] & $+6.8$ [$+5.3$, $+8.3$] & $+1.6$ [$+1.0$, $+2.2$] & $+4.5$ [$+3.8$, $+5.2$] \\
+\midrule
+\multirow{2}{*}{Domain shift} & LR & $-3.3$ [$-3.7$, $-2.8$] & $+1.8$ [$+0.9$, $+2.7$] & $+1.4$ [$+1.1$, $+1.6$] & $+1.3$ [$+1.0$, $+1.6$] \\
+ & MLP & $-3.4$ [$-4.5$, $-2.2$] & $+3.0$ [$+0.7$, $+5.3$] & $+1.8$ [$+1.3$, $+2.2$] & $+1.9$ [$+1.3$, $+2.5$] \\
+\midrule
+\multirow{2}{*}{Both} & LR & $-4.6$ [$-4.9$, $-4.2$] & $+6.6$ [$+5.2$, $+8.0$] & $+2.3$ [$+1.9$, $+2.7$] & $+6.9$ [$+6.5$, $+7.2$] \\
+ & MLP & $-2.5$ [$-3.5$, $-1.4$] & $+9.3$ [$+6.0$, $+12.6$] & $+3.0$ [$+2.1$, $+3.8$] & $+6.4$ [$+5.5$, $+7.3$] \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Risk-coverage curves show that these gaps are not an artefact of the 80\% operating point (Fig.~\ref{fig:rc}). Under annotation bias, shift, or both, $B$'s curve lies above $A$'s at every coverage level from 50\% to 100\%. Abstaining more narrows the absolute gap but does not close it.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{figs/fig3_riskcov.pdf}
+\caption{Risk-coverage curves per subgroup (true labels, logistic regression, 100 replicates) for the four archetype scenarios. At baseline the two curves coincide.}
+\label{fig:rc}
+\end{figure*}
+
+The neural network reproduced the main pattern: silent misses in $B$ were higher under every driver, and larger than with logistic regression. One result depended on the model. Under annotation bias alone, the network abstained slightly more on $B$ (+0.9\pp) while logistic regression abstained less ($-1.4$\pp), so the sign of the abstention change caused by label bias should not be taken as general. The effect of shift on abstention was the same for both models.
+
+%=====================================================================
+\input{results2}
+
+\input{realresults}
+
+%=====================================================================
+\section{Discussion}
+
+The main finding is that a subgroup's abstention rate does not show whether that subgroup is being served well. Of the four drivers, only an intrinsic signal gap made the selective model abstain more on the disadvantaged group, which is the behaviour a fairness monitor would look for. Label bias and domain shift, both documented in chest X-ray data \cite{seyyedkalantari2021,zech2018}, lowered abstention or left it unchanged. Together they can produce equal abstention rates alongside a large gap in missed disease. The real-image experiment reproduced two of these mechanisms with a pretrained deep network: label bias widened the gap only for a group the embeddings could identify, and an acquisition change made the system defer far less often for the affected group while its accuracy fell.
+
+This changes what a deployment report should contain. We suggest three steps. First, report the silent-miss rate per subgroup alongside abstention and selective risk, since abstention parity alone is not evidence of fairness. Second, estimate silent misses on a small audit set with independently adjudicated labels; our audit experiment shows that routine labels sharing the training labels' bias can misstate the gap two- to four-fold. Third, treat a lower abstention rate in one subgroup as a prompt to check for group-specific acquisition differences or label bias, not as a sign that the model is justifiably more certain about that group.
+
+\input{discussion_lit}
+
+The mitigation experiment points the same way. Equalising abstention with subgroup-specific thresholds is the obvious fix for an abstention-parity monitor, and it did not reduce silent misses; it sometimes increased them by removing deferrals that had been protecting the subgroup. What worked was correcting the confidence score itself with a small set of clean, locally labelled cases: recalibrating per subgroup on 600 audit cases removed nearly all of the silent-miss gap caused by label bias and shift. The audit set therefore serves two purposes, measuring the harm and repairing it, which strengthens the case for collecting one at each deployment site.
+
+\section{Limitations}
+
+Our evidence comes in two tiers, each with limits. The simulation establishes mechanisms under stated assumptions: Gaussian features, two subgroups, one confidence score (the maximum predicted probability) and a parametric shift. The robustness checks relax some of these assumptions but not all, and the simulated effect sizes should not be read as estimates for any deployed system. The real-image experiment uses a modern pretrained network, but on a small collection assembled from many hospitals and publications, with a task (COVID-19 versus other findings) whose labels we treated as correct, label bias that we injected rather than observed, and frozen embeddings with a linear classifier instead of end-to-end fine-tuning. With about 48 female patients per deployment split, single splits vary widely, so only the averages over 300 splits should be interpreted. The scanner shift was produced by image processing rather than by a different device, and the view-shift comparison is confounded by a higher COVID-19 prevalence among supine images. We tested two mitigations, both of which assume that a correctly labelled audit set from the deployment site is available. Confirming effect sizes requires a large multi-site dataset with radiologist-adjudicated labels, which is our next step.
+
+\section{Conclusion}
+
+In a controlled simulation of selective chest X-ray classification, the drivers of subgroup harm moved abstention in opposite directions. A weaker disease signal raised a subgroup's abstention rate, while underdiagnosis-style label bias and group-specific domain shift lowered it or left it near target, even as missed disease accepted without deferral increased. Label bias mattered only when the subgroup was detectable from the features, a result we reproduced on real radiographs with a pretrained deep network, and audits that reused the biased labels misstated the gap. Equalising abstention did not reduce the harm, but recalibrating on a small clean-label audit set did. Abstention parity is therefore not a sufficient fairness check for selective medical AI; per-subgroup silent-miss rates on independently labelled audit data are a more direct one.
+
+\section*{Data and Code Availability}
+The simulated data are generated by our scripts; the real radiographs are from the public COVID-19 image data collection \cite{cohen2020covid} (\url{https://github.com/ieee8023/covid-chestxray-dataset}), and the pretrained network is from TorchXRayVision \cite{cohen2021xrv}. The scripts that generate every number, table and figure are provided with this paper, and rerunning them with the stated seeds reproduces the results exactly. Software versions, seeds and settings are given in Table~\ref{tab:repro}.
+\begin{table}[!t]
+\centering
+\caption{Reproducibility details.}\label{tab:repro}
+\footnotesize
+\begin{tabular}{@{}p{1.7cm}p{6.1cm}@{}}
+\toprule
+Item & Value \\
+\midrule
+Software & Python 3.13.16, NumPy 2.5.3, scikit-learn 1.9.1, pandas 3.0.5, SciPy 1.18.1, Matplotlib 3.11.2 \\
+Seeds & NumPy \texttt{SeedSequence} with entropy [20261018, CRC32 of cell name]; one child sequence per replicate \\
+Sample sizes & 4,000 training / 2,000 calibration / 4,000 deployment per replicate (MLP: 2,000 / 1,000 / 3,000) \\
+Fixed settings & 20 features, prevalence 0.30, share of $B$ 0.20, $\delta_A = 2.5$, 3\% label noise, target coverage 0.80 \\
+Classifiers & Logistic regression ($C=1$); MLP, one hidden layer of 32 units \\
+Replicates & Factorial 200 per cell; dose-response 100 per point; archetypes 100 (LR) and 30 (MLP) \\
+Compute & About 2.5 min on 2 CPU cores for all experiments \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

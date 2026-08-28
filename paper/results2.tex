@@ -1,0 +1,69 @@
+\subsection{What the Silent-Miss Rate Adds Over Standard Metrics}
+\label{sec:decomp}
+To test whether the silent-miss rate carries information beyond familiar metrics, a second simulation run (60 replicates per scenario, same design) recorded all quantities of Eq.~\eqref{eq:smr} per subgroup (Table~\ref{tab:decomp}). The gaps disagree in ways that matter for monitoring. With a signal gap, the full-coverage FNR gap (+10.9\pp) overstated the harm of the deployed pathway, because deferral sent many of $B$'s errors to a radiologist; the silent-miss gap was +6.3\pp. Under domain shift the opposite happened: the FNR gap was null ($-0.3$\pp) and the selective-FNR gap was not significant, yet $B$'s diseased patients were accepted more often ($c^{+}$ +6.8\pp), so the silent-miss gap was positive (+1.2\pp{} [+0.2, +2.3]). At 70\% target coverage the FNR gap under shift even favoured $B$ ($-2.9$\pp{} [$-5.1$, $-0.8$]) while the silent-miss gap did not (+0.7\pp{} [$-0.3$, +1.6]). With all four drivers, abstention was at parity (+0.1\pp), and the selective-FNR gap (+26.7\pp) exceeded the silent-miss gap (+16.6\pp) because it conditions on acceptance. No single standard metric tracked the patient-level risk of an unflagged miss across scenarios.
+
+\begin{table*}[t]
+\centering
+\caption{Subgroup gaps ($B$ minus $A$, pp, 95\% CI) in abstention and in the quantities of Eq.~\eqref{eq:smr}; logistic regression, 80\% target coverage, 60 replicates per scenario.}
+\label{tab:decomp}
+\footnotesize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Scenario & Abstention & FNR (full coverage) & Selective FNR & Coverage of diseased, $c^{+}$ & Silent-miss rate \\
+\midrule
+Baseline & $-0.1$ {\scriptsize[-0.5, +0.3]} & $0.0$ {\scriptsize[-0.6, +0.7]} & $0.0$ {\scriptsize[-0.7, +0.7]} & $+0.5$ {\scriptsize[-0.3, +1.3]} & $0.0$ {\scriptsize[-0.4, +0.5]} \\
+Signal gap & $+7.1$ {\scriptsize[+6.6, +7.6]} & $+10.9$ {\scriptsize[+10.3, +11.6]} & $+11.3$ {\scriptsize[+10.5, +12.1]} & $-6.9$ {\scriptsize[-7.8, -6.0]} & $+6.3$ {\scriptsize[+5.7, +6.9]} \\
+Annotation bias & $-1.6$ {\scriptsize[-2.0, -1.2]} & $+8.1$ {\scriptsize[+7.2, +9.1]} & $+9.0$ {\scriptsize[+7.9, +10.1]} & $-5.3$ {\scriptsize[-6.3, -4.3]} & $+4.6$ {\scriptsize[+4.0, +5.3]} \\
+Domain shift & $-3.3$ {\scriptsize[-3.8, -2.7]} & $-0.3$ {\scriptsize[-2.2, +1.5]} & $+1.2$ {\scriptsize[-0.4, +2.8]} & $+6.8$ {\scriptsize[+5.1, +8.5]} & $+1.2$ {\scriptsize[+0.2, +2.3]} \\
+Annotation + shift & $-4.6$ {\scriptsize[-5.1, -4.1]} & $+6.2$ {\scriptsize[+3.6, +8.8]} & $+9.5$ {\scriptsize[+6.4, +12.6]} & $+3.8$ {\scriptsize[+2.3, +5.4]} & $+6.4$ {\scriptsize[+4.6, +8.2]} \\
+All four & $+0.1$ {\scriptsize[-0.7, +0.9]} & $+20.8$ {\scriptsize[+18.1, +23.4]} & $+26.7$ {\scriptsize[+23.2, +30.2]} & $-1.7$ {\scriptsize[-2.8, -0.7]} & $+16.6$ {\scriptsize[+14.4, +18.8]} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Robustness to the Simulation's Assumptions}
+We repeated the archetype scenarios under four changes to the assumptions (Table~\ref{tab:robust}): underdiagnosis concentrated on the subtle cases (the 35\% of $B$'s positives with the weakest disease evidence are mislabelled, rather than a random 35\%); features passed through a random nonlinear map and classified by a two-layer neural network; and target coverage of 90\% or 70\% instead of 80\%. The silent-miss gap under annotation bias stayed between +2.7 and +6.5\pp, and with all four drivers between +10.7 and +17.2\pp, while the abstention gap in that scenario stayed within 2.7\pp{} of parity. Domain shift lowered $B$'s abstention in every variant ($-1.6$ to $-4.4$\pp); its silent-miss gap was positive in all five variants but its confidence interval excluded zero only in three (main, subtle cases, nonlinear). As in the factorial run, the direction of the abstention change under annotation bias depended on the model: it was negative for logistic regression and positive for the neural network.
+
+\begin{table}[t]
+\centering
+\caption{Robustness: abstention gap and silent-miss gap ($B$ minus $A$, pp) under changed assumptions (60 replicates; 30 for the MLP).}
+\label{tab:robust}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & \multicolumn{2}{c}{Annotation bias} & \multicolumn{2}{c}{Domain shift} & \multicolumn{2}{c}{All four} \\
+Variant & Abst. & SMR & Abst. & SMR & Abst. & SMR \\
+\midrule
+Main setting & $-1.6$ & $+4.6$ & $-3.3$ & $+1.2$ & $+0.1$ & $+16.6$ \\
+Subtle cases mislabelled & $-1.3$ & $+3.9$ & $-3.2$ & $+1.7$ & $+1.3$ & $+13.4$ \\
+Nonlinear + MLP & $+2.4$ & $+6.5$ & $-2.1$ & $+4.2$ & $+2.7$ & $+15.4$ \\
+Coverage 90\% & $-0.5$ & $+5.8$ & $-1.6$ & $+0.5$ & $+0.7$ & $+17.2$ \\
+Coverage 70\% & $-2.5$ & $+2.7$ & $-4.4$ & $+0.7$ & $+1.5$ & $+10.7$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Testing Two Mitigations}
+We compared the global threshold with two remedies (Table~\ref{tab:mitig}). The first gives each subgroup its own threshold so that both abstain on 20\% of their calibration cases, which is what a team would do to equalise abstention rates. The second recalibrates the model's probabilities separately per subgroup (Platt scaling) on a small audit set of 600 deployment cases with correct labels, then applies one threshold set for 20\% abstention on that audit set.
+
+\begin{table*}[t]
+\centering
+\caption{Abstention gap and silent-miss gap ($B$ minus $A$, pp) under three deferral policies, and abstention rates of $B$ / $A$ (\%) after audit recalibration (logistic regression, 60 replicates per scenario).}
+\label{tab:mitig}
+\footnotesize
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+ & \multicolumn{2}{c}{Global threshold} & \multicolumn{2}{c}{Group-specific thresholds} & \multicolumn{2}{c}{Audit recalibration} & Abstention \\
+Scenario & Abst. gap & SMR gap & Abst. gap & SMR gap & Abst. gap & SMR gap & $B$ / $A$ (\%) \\
+\midrule
+Signal gap & $+7.1$ & $+6.3$ & $-0.2$ & $+10.0$ & $+15.1$ & $+4.6$ & 32 / 17 \\
+Annotation bias & $-1.6$ & $+4.6$ & $-0.3$ & $+3.9$ & $+0.6$ & $+0.2$ & 21 / 20 \\
+Domain shift & $-3.3$ & $+1.2$ & $-3.9$ & $+1.5$ & $-0.5$ & $0.0$ & 20 / 20 \\
+Annotation + shift & $-4.6$ & $+6.4$ & $-3.3$ & $+5.7$ & $-1.9$ & $+0.9$ & 19 / 21 \\
+All four & $+0.1$ & $+16.6$ & $-3.5$ & $+19.1$ & $+14.2$ & $+4.4$ & 31 / 17 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Equalising abstention did not reduce silent misses and sometimes increased them: with a signal gap the silent-miss gap rose from +6.3 to +10.0\pp, and with all four drivers from +16.6 to +19.1\pp, because the group-specific threshold removed the extra deferrals that had been protecting $B$. Recalibration on clean audit labels removed almost all of the gap caused by annotation bias (+4.6 to +0.2\pp), domain shift (+1.2 to 0.0\pp) and the two together (+6.4 to +0.9\pp), with abstention rates staying near 20\% in both groups. When $B$'s disease signal was intrinsically weaker, recalibration narrowed the gap (+6.3 to +4.6\pp; +16.6 to +4.4\pp{} with all drivers) only by deferring many more of $B$'s cases (32\% vs.\ 17\%). In that case the remedy moves the burden to radiologists rather than removing it, which is the honest outcome when the images themselves carry less information.
